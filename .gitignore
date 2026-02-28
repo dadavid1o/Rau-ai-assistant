@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+
+# Env / secrets
+.env
+.venv/
+venv/
+
+# OS
+.DS_Store
+
+# Generated DB
+courses.db
+
+# Future vector stores
+chroma_data/
