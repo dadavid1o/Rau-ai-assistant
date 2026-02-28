@@ -31,11 +31,11 @@ def import_courses(csv_path: str) -> int:
                 INSERT INTO courses (
                     plan, index_code, name,
                     semester, credits, course_type,
-                    department, competencies, teachers,
+                    department, competencies,
                     description, learning_outcomes, aliases,
                     source
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(plan, index_code, semester) DO UPDATE SET
                     name=excluded.name,
                     semester=excluded.semester,
@@ -43,7 +43,6 @@ def import_courses(csv_path: str) -> int:
                     course_type=excluded.course_type,
                     department=excluded.department,
                     competencies=excluded.competencies,
-                    teachers=excluded.teachers,
                     description=excluded.description,
                     learning_outcomes=excluded.learning_outcomes,
                     aliases=excluded.aliases,
@@ -57,7 +56,6 @@ def import_courses(csv_path: str) -> int:
                 (r.get("course_type") or "").strip(),
                 (r.get("department") or "").strip(),
                 (r.get("competencies") or "").strip(),
-                (r.get("teachers") or "").strip(),
                 (r.get("description") or "").strip(),
                 (r.get("learning_outcomes") or "").strip(),
                 (r.get("aliases") or "").strip(),

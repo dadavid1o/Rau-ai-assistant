@@ -32,7 +32,7 @@ def search_courses(question: str, top_k: int = 3):
     where_sql = " AND ".join(clauses)
 
     sql = f"""
-        SELECT id, plan, index_code, name, semester, credits, course_type, teachers,
+        SELECT id, plan, index_code, name, semester, credits, course_type,
                description, learning_outcomes, aliases, source
         FROM courses
         WHERE {where_sql}

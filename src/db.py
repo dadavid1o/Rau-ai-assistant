@@ -23,7 +23,6 @@ def init_db() -> None:
             course_type TEXT,
             department TEXT,
             competencies TEXT,
-            teachers TEXT,
             description TEXT,
             learning_outcomes TEXT,
             aliases TEXT,
@@ -42,7 +41,6 @@ def insert_course(
     semester: Optional[int],
     credits: Optional[int],
     course_type: str,
-    teachers: str,
     description: str,
     learning_outcomes: str,
     source: str = ""
@@ -50,7 +48,7 @@ def insert_course(
     with get_conn() as conn:
         conn.execute("""
             INSERT INTO courses
-              (name, semester, credits, course_type, teachers, description, learning_outcomes, source)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?);
-        """, (name, semester, credits, course_type, teachers, description, learning_outcomes, source))
+              (name, semester, credits, course_type, description, learning_outcomes, source)
+            VALUES (?, ?, ?, ?, ?, ?, ?);
+        """, (name, semester, credits, course_type, description, learning_outcomes, source))
         conn.commit()
