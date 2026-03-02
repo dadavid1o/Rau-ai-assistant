@@ -1,32 +1,36 @@
 import os
 from openai import OpenAI
+from dotenv import load_dotenv
+
+# запускаем app.py из src/ и он импортирует этот файл, так что .env лежит в корне проекта 
+load_dotenv("../.env")
 
 def answer_with_openai(question: str, context: str) -> str:
-    if not os.getenv("OPENAI_API_KEY"):
-      return "[LLM отключён: нет OPENAI_API_KEY. Сейчас работаю только в режиме поиска.]"
-    
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        return "OPENAI_API_KEY не найден. Установи переменную окружения и попробуй снова."
+        return "[LLM отключён: нет OPENAI_API_KEY.]"
 
-    client = OpenAI(api_key=api_key)
+    model = os.getenv("OPENAI_MODEL", "gpt-5-mini")
 
-    system = (
-        "Ты академический ассистент магистерской программы. "
-        "Отвечай строго на основе предоставленного КОНТЕКСТА из базы курсов. "
-        "Если в контексте нет ответа — так и скажи: 'В базе нет информации для точного ответа'. "
-        "Не выдумывай."
-    )
+    try:
+        client = OpenAI(api_key=api_key)
 
-    user = f"КОНТЕКСТ:\n{context}\n\nВОПРОС:\n{question}\n\nОТВЕТ:"
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Ты помощник по учебному плану магистратуры MLDS. "
+                        "Отвечай строго по предоставленному контексту. "
+                        "Если в контексте нет ответа — скажи, что данных нет."
+                    ),
+                },
+                {"role": "user", "content": f"Контекст:\n{context}\n\nВопрос: {question}"},
+            ],
+        )
 
-    resp = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        temperature=0.2,
-    )
+        return resp.choices[0].message.content.strip()
 
-    return resp.choices[0].message.content.strip()
+    except Exception as e:
+        return f"[LLM временно недоступен: {e}]"

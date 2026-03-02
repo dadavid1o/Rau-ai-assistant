@@ -13,7 +13,20 @@ def _variants(word: str):
 
 
 def search_courses(question: str, top_k: int = 3):
-    raw_words = [w.strip() for w in question.replace("?", " ").replace(",", " ").split() if len(w.strip()) >= 2]
+    STOP = {
+        "в", "во", "на", "и", "или", "а", "но", "что", "это", "как", "какой", "каком",
+        "какая", "какие", "сколько", "где", "когда", "ли", "по", "для", "о", "об",
+        "семестр", "семестре", "з.е", "зе", "з.е.", "кредитов", "кредита", "кредиты"
+    }
+
+    tokens = [w.strip() for w in question.replace("?", " ").replace(",", " ").split() if w.strip()]
+    raw_words = []
+    for t in tokens:
+        tl = t.lower().strip(".")
+        if tl in STOP:
+            continue
+        if len(t) >= 2:
+            raw_words.append(t)
     if not raw_words:
         return []
 
@@ -48,6 +61,7 @@ def format_context(rows) -> str:
     parts = []
     for r in rows:
         parts.append(
+            f"CODE: {r['plan']} {r['index_code']}\n"
             f"COURSE: {r['name']}\n"
             f"Semester: {r['semester']}, Credits: {r['credits']}, Type: {r['course_type']}\n"
             f"Description: {r['description']}\n"
