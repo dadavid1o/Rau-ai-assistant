@@ -37,16 +37,15 @@ def import_courses(csv_path: str) -> int:
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(plan, index_code, semester) DO UPDATE SET
-                    name=excluded.name,
-                    semester=excluded.semester,
-                    credits=excluded.credits,
-                    course_type=excluded.course_type,
-                    department=excluded.department,
-                    competencies=excluded.competencies,
-                    description=excluded.description,
-                    learning_outcomes=excluded.learning_outcomes,
-                    aliases=excluded.aliases,
-                    source=excluded.source;
+                    name = COALESCE(NULLIF(excluded.name, ''), courses.name),
+                    credits = COALESCE(excluded.credits, courses.credits),
+                    course_type = COALESCE(NULLIF(excluded.course_type, ''), courses.course_type),
+                    department = COALESCE(NULLIF(excluded.department, ''), courses.department),
+                    competencies = COALESCE(NULLIF(excluded.competencies, ''), courses.competencies),
+                    aliases = COALESCE(NULLIF(excluded.aliases, ''), courses.aliases),
+                    description = COALESCE(NULLIF(excluded.description, ''), courses.description),
+                    learning_outcomes = COALESCE(NULLIF(excluded.learning_outcomes, ''), courses.learning_outcomes),
+                    source = COALESCE(NULLIF(excluded.source, ''), courses.source);
             """, (
                 plan,
                 index_code,

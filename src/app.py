@@ -16,7 +16,8 @@ def search_courses(question: str, top_k: int = 3):
     STOP = {
         "в", "во", "на", "и", "или", "а", "но", "что", "это", "как", "какой", "каком",
         "какая", "какие", "сколько", "где", "когда", "ли", "по", "для", "о", "об",
-        "семестр", "семестре", "з.е", "зе", "з.е.", "кредитов", "кредита", "кредиты"
+        "семестр", "семестре", "з.е", "зе", "з.е.", "кредитов", "кредита", "кредиты",
+        "курс", "курса", "курсе", "чем", "про", "расскажи", "объясни", "поясни"
     }
 
     tokens = [w.strip() for w in question.replace("?", " ").replace(",", " ").split() if w.strip()]
@@ -27,6 +28,21 @@ def search_courses(question: str, top_k: int = 3):
             continue
         if len(t) >= 2:
             raw_words.append(t)
+    if not raw_words:
+        return []
+
+    plan_filter = None
+    filtered = []
+    for w in raw_words:
+        wl = w.lower()
+        if wl == "mlds":
+            plan_filter = "MLDS"
+        elif wl == "matmod":
+            plan_filter = "MatMod"
+        else:
+            filtered.append(w)
+    raw_words = filtered
+
     if not raw_words:
         return []
 
@@ -43,6 +59,9 @@ def search_courses(question: str, top_k: int = 3):
         clauses.append("(" + " OR ".join(sub) + ")")
 
     where_sql = " AND ".join(clauses)
+    if plan_filter is not None:
+        where_sql = f"(plan = ?) AND ({where_sql})"
+        params.insert(0, plan_filter)
 
     sql = f"""
         SELECT id, plan, index_code, name, semester, credits, course_type,
@@ -75,6 +94,7 @@ def main() -> None:
     init_db()
 
     import_courses("../data/mlds_skeleton.csv")
+    import_courses("../data/matmod_skeleton.csv")
     print("Консольный ассистент. Введи вопрос или 'exit'.")
 
     while True:
