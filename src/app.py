@@ -93,12 +93,38 @@ def format_context(rows) -> str:
 def main() -> None:
     init_db()
 
-    import_courses("../data/mlds_skeleton.csv")
-    import_courses("../data/matmod_skeleton.csv")
+    #import_courses("../data/mlds_skeleton.csv")
+    #import_courses("../data/matmod_skeleton.csv")
     print("Консольный ассистент. Введи вопрос или 'exit'.")
 
     while True:
         q = input("> ").strip()
+        
+        if q in (":exit", ":quit"):
+            break
+
+        if q == ":help":
+            print(
+                "Команды:\n"
+                "  :import  - импортировать CSV (только если нужно)\n"
+                "  :backup  - создать backup_courses.db\n"
+                "  :help    - помощь\n"
+                "  :exit    - выход\n"
+                "\nОбычный ввод: поиск по базе."
+            )
+            continue
+
+        if q == ":import":
+            import_courses("../data/mlds_skeleton.csv")
+            import_courses("../data/matmod_skeleton.csv")
+            print("Импорт выполнен.")
+            continue
+
+        if q == ":backup":
+            with get_conn() as conn:
+                conn.execute("VACUUM INTO '../backup_courses.db';")
+            print("Бэкап создан: backup_courses.db")
+            continue
         if q.lower() in ("exit", "quit"):
             break
 
