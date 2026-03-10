@@ -16,3 +16,4 @@ courses.db
 # Future vector stores
 chroma_data/
 backup_courses.db
+*.swp
