@@ -2,7 +2,7 @@ plan,index_code,name,semester,credits,course_type,department,competencies,aliase
 MatMod,Б1.О.01,Непрерывные математические модели,1,5,mandatory,,,,,MatMod PDF table (sem 1-2),,
 MatMod,Б1.О.04,Метод конечных элементов,1,5,mandatory,,,FEM; Finite Element Method,MatMod PDF table (sem 1-2),,
 MatMod,Б1.О.06,Обобщенные функции и их применения,1,5,mandatory,,,,,MatMod PDF table (sem 1-2),,
-MatMod,Б1.В.01,Полюсные решения некоторых нелинейных операторных уравнений,1,5,mandatory,,,,,MatMod PDF table (sem 1-2),,
+MatMod,Б1.В.01,Положительные решения некоторых нелинейных операторных уравнений,1,5,mandatory,,,,,MatMod PDF table (sem 1-2),,
 MatMod,Б2.О.01(П),НИР (производственная),1,6,practice,,,,,MatMod PDF table (sem 1-2),,
 MatMod,Б2.О.04(П),Научно-исследовательская практика (производственная),1,4,practice,,,,,MatMod PDF table (sem 1-2),,
 
