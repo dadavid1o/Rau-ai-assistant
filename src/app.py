@@ -1,5 +1,10 @@
-from db import init_db, get_conn
-from llm import answer_with_openai
+from db import (
+    init_db,
+    get_conn,
+    get_courses_by_plan_and_semester,
+    get_course_by_name_or_code,   
+)
+from llm import answer_with_openai, normalize_user_query
 from import_csv import import_courses
 
 
@@ -65,7 +70,7 @@ def search_courses(question: str, top_k: int = 3):
 
     sql = f"""
         SELECT id, plan, index_code, name, semester, credits, course_type,
-               description, learning_outcomes, aliases, source
+               description, learning_outcomes, competencies, aliases, source
         FROM courses
         WHERE {where_sql}
         LIMIT ?;
@@ -85,6 +90,7 @@ def format_context(rows) -> str:
             f"Semester: {r['semester']}, Credits: {r['credits']}, Type: {r['course_type']}\n"
             f"Description: {r['description']}\n"
             f"Learning outcomes: {r['learning_outcomes']}\n"
+            f"Competencies: {r['competencies']}\n"
             f"Source: {r['source']}\n"
         )
     return "\n---\n".join(parts)
@@ -93,42 +99,43 @@ def format_context(rows) -> str:
 def main() -> None:
     init_db()
 
-    #import_courses("../data/mlds_skeleton.csv")
-    #import_courses("../data/matmod_skeleton.csv")
+    import_courses("../data/mlds_skeleton.csv")
+    import_courses("../data/matmod_skeleton.csv")
     print("Консольный ассистент. Введи вопрос или 'exit'.")
 
     while True:
         q = input("> ").strip()
-        
-        if q in (":exit", ":quit"):
-            break
-
-        if q == ":help":
-            print(
-                "Команды:\n"
-                "  :import  - импортировать CSV (только если нужно)\n"
-                "  :backup  - создать backup_courses.db\n"
-                "  :help    - помощь\n"
-                "  :exit    - выход\n"
-                "\nОбычный ввод: поиск по базе."
-            )
-            continue
-
-        if q == ":import":
-            import_courses("../data/mlds_skeleton.csv")
-            import_courses("../data/matmod_skeleton.csv")
-            print("Импорт выполнен.")
-            continue
-
-        if q == ":backup":
-            with get_conn() as conn:
-                conn.execute("VACUUM INTO '../backup_courses.db';")
-            print("Бэкап создан: backup_courses.db")
-            continue
         if q.lower() in ("exit", "quit"):
             break
 
-        rows = search_courses(q, top_k=3)
+        normalized = normalize_user_query(q)
+        rows = []
+
+        if normalized is not None:
+            intent = normalized.get("intent")
+            plan = normalized.get("plan")
+            semester = normalized.get("semester")
+            course_name = normalized.get("course_name")
+            index_code = normalized.get("index_code")
+
+            if intent == "list_courses" and plan and semester:
+                rows = get_courses_by_plan_and_semester(plan, semester)
+
+            elif intent in (
+                "course_info",
+                "course_semester",
+                "course_credits",
+                "course_competencies",
+                "course_learning_outcomes",
+            ):
+                rows = get_course_by_name_or_code(
+                    course_name=course_name,
+                    index_code=index_code,
+                )
+
+        if not rows:
+            rows = search_courses(q, top_k=3)
+
         if not rows:
             print("В базе нет подходящих данных. Попробуй переформулировать.")
             continue
