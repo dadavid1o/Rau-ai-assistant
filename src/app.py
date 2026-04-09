@@ -109,7 +109,6 @@ def main() -> None:
             break
 
         normalized = normalize_user_query(q)
-        print("[DEBUG normalize_user_query]", normalized)
         rows = []
 
         if normalized is not None:

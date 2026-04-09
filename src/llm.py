@@ -64,8 +64,6 @@ def normalize_user_query(question: str):
     или не удалось распарсить ответ.
     """
     api_key = os.getenv("OPENAI_API_KEY")
-    print("[DEBUG api_key exists]", bool(api_key))
-    print("[DEBUG OpenAI available]", OpenAI is not None)
     if not api_key or OpenAI is None:
         return None
 
@@ -152,5 +150,4 @@ field:
         }
 
     except Exception as e:
-        print("[DEBUG normalize_user_query error]", e)
-        return None
+            return None
