@@ -52,3 +52,43 @@ def insert_course(
             VALUES (?, ?, ?, ?, ?, ?, ?);
         """, (name, semester, credits, course_type, description, learning_outcomes, source))
         conn.commit()
+def get_courses_by_plan_and_semester(plan: str, semester: int):
+    with get_conn() as conn:
+        rows = conn.execute("""
+            SELECT id, plan, index_code, name, semester, credits, course_type,
+                   description, learning_outcomes, competencies, aliases, source
+            FROM courses
+            WHERE plan = ? AND semester = ?
+            ORDER BY index_code;
+        """, (plan, semester)).fetchall()
+        return list(rows)
+
+
+def get_course_by_name_or_code(course_name: Optional[str] = None, index_code: Optional[str] = None):
+    with get_conn() as conn:
+        if index_code:
+            rows = conn.execute("""
+                SELECT id, plan, index_code, name, semester, credits, course_type,
+                       description, learning_outcomes, competencies, aliases, source
+                FROM courses
+                WHERE index_code = ?
+                ORDER BY semester
+                LIMIT 5;
+            """, (index_code,)).fetchall()
+            return list(rows)
+
+        if course_name:
+            like = f"%{course_name}%"
+            rows = conn.execute("""
+                SELECT id, plan, index_code, name, semester, credits, course_type,
+                       description, learning_outcomes, competencies, aliases, source
+                FROM courses
+                WHERE name LIKE ?
+                   OR aliases LIKE ?
+                   OR description LIKE ?
+                ORDER BY semester
+                LIMIT 5;
+            """, (like, like, like)).fetchall()
+            return list(rows)
+
+        return []
