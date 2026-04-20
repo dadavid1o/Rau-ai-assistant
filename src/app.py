@@ -1,10 +1,11 @@
 from db import (
     init_db,
     get_conn,
+    get_courses_by_plan,
     get_courses_by_plan_and_semester,
     get_course_by_name_or_code,   
 )
-from llm import answer_with_openai, normalize_user_query
+from llm import answer_with_openai, normalize_user_query, is_llm_available
 from import_csv import import_courses
 
 
@@ -85,13 +86,13 @@ def format_context(rows) -> str:
     parts = []
     for r in rows:
         parts.append(
-            f"CODE: {r['plan']} {r['index_code']}\n"
-            f"COURSE: {r['name']}\n"
-            f"Semester: {r['semester']}, Credits: {r['credits']}, Type: {r['course_type']}\n"
-            f"Description: {r['description']}\n"
-            f"Learning outcomes: {r['learning_outcomes']}\n"
-            f"Competencies: {r['competencies']}\n"
-            f"Source: {r['source']}\n"
+            f"Код: {r['plan']} {r['index_code']}\n"
+            f"Дисциплина: {r['name']}\n"
+            f"Семестр: {r['semester']}, Credits: {r['credits']}, Type: {r['course_type']}\n"
+            f"Описание: {r['description']}\n"
+            f"Результаты обучения: {r['learning_outcomes']}\n"
+            f"Компетенции: {r['competencies']}\n"
+           
         )
     return "\n---\n".join(parts)
 
@@ -120,6 +121,8 @@ def main() -> None:
 
             if intent == "list_courses" and plan and semester:
                 rows = get_courses_by_plan_and_semester(plan, semester)
+            elif intent == "list_courses" and plan:
+                rows = get_courses_by_plan(plan)
 
             elif intent in (
                 "course_info",

@@ -2,74 +2,83 @@ import json
 import os
 
 try:
-    from openai import OpenAI
+    from google import genai
 except ImportError:
-    OpenAI = None
+    genai = None
 
 try:
     from dotenv import load_dotenv
 except ImportError:
     load_dotenv = None
 
-# app.py запускается из src/, .env лежит в корне проекта
+# app.py запускаю из src/, .env лежит в корне проекта
 if load_dotenv is not None:
     load_dotenv("../.env")
 
 
 def is_llm_available() -> bool:
-    return OpenAI is not None and bool(os.getenv("OPENAI_API_KEY"))
+    return genai is not None and bool(os.getenv("GEMINI_API_KEY"))
 
 
 def answer_with_openai(question: str, context: str) -> str:
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY")
+
+    if genai is None:
+        print("LLM Пакет google-genai не установлен. Генерация ответа недоступна")
+        return "[LLM отключён: пакет google-genai не установлен]"
+
     if not api_key:
-        return "[LLM отключён: нет OPENAI_API_KEY.]"
+        print("LLM GEMINI_API_KEY не найден. Генерация ответа недоступна.")
+        return "[LLM отключён: нет GEMINI_API_KEY.]"
 
-    if OpenAI is None:
-        return "[LLM отключён: пакет openai не установлен.]"
-
-    model = os.getenv("OPENAI_MODEL", "gpt-5-mini")
+    model="gemini-2.5-flash"
 
     try:
-        client = OpenAI(api_key=api_key)
+        client = genai.Client(api_key=api_key)
 
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "Ты помощник по учебным планам магистратуры MLDS и MatMod. "
-                        "Отвечай строго по предоставленному контексту. "
-                        "Если в контексте нет ответа — скажи, что данных нет."
-                    ),
-                },
-                {"role": "user", "content": f"Контекст:\n{context}\n\nВопрос: {question}"},
-            ],
+        prompt = (
+           "Ты помощник по учебным планам магистратуры MLDS и MatMod. "
+           "Отвечай строго по предоставленному контексту. "
+           "Не добавляй факты от себя. "
+           "Не дoдумывай отсутствующую информацию. "
+           "Если в контексте нет ответа — скажи, что данных нет. "
+           "Старайся минимально переформулировать найденные данные и не искажать их смысл.\n\n"
+            f"Контекст:\n{context}\n\n"
+            f"Вопрос: {question}"
         )
 
-        return resp.choices[0].message.content.strip()
+        resp = client.models.generate_content(
+            model=model,
+            contents=prompt,
+        )
+
+        return resp.text.strip()
 
     except Exception as e:
+        print(f"LLM Не удалось получить ответ от Gemini: {e}")
         return f"[LLM временно недоступен: {e}]"
 
 
 def normalize_user_query(question: str):
-   
     """
-    Преобразует свободный вопрос пользователя в формат,
+    преобразует вопрос пользователя в формат,
     удобный для поиска по базе.
-    
-    Возвращает dict или None, если LLM недоступен
-    или не удалось распарсить ответ.
+
+    возвращает dict или None
     """
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key or OpenAI is None:
+    api_key = os.getenv("GEMINI_API_KEY")
+
+    if genai is None:
+        print("LLM Пакет google-genai не установлен. AI-нормализация запроса недоступна.")
         return None
 
-    model = os.getenv("OPENAI_MODEL", "gpt-5-mini")
+    if not api_key:
+        print("LLM GEMINI_API_KEY не найден. AI-нормализация запроса недоступна.")
+        return None
 
-    system_prompt = """
+    model="gemini-2.5-flash"
+
+    prompt = """
 Ты помогаешь преобразовать вопрос пользователя к удобному формату для поиска по SQLite-базе дисциплин магистратуры.
 
 Верни строго JSON без markdown и без пояснений.
@@ -103,15 +112,15 @@ def normalize_user_query(question: str):
 - Если не понял запрос -> unknown
 
 plan:
-- "MatMod", если пользователь пишет MatMod, МатМoд, матмoд, математическое моделирование
+- "MatMod", если пользователь пишет MatMod, МатМод, матмод, математическое моделирование
 - "MLDS", если пользователь пишет MLDS, млдс, machine learning and data science
 - null, если неясно
 
 semester:
 - 1, если пользователь пишет "первый семестр", "в 1 семестре", "в первом семестре"
-- 2, если пользователь пишет "второй семестр", "во 2 семестре"
-- 3, если пользователь пишет "третий семестр", "в 3 семестре"
-- 4, если пользователь пишет "четвертый семестр", "в 4 семестре"
+- 2, если пользователь пишет "второй семестр", "во 2 семестре", "во втором семестре"
+- 3, если пользователь пишет "третий семестр", "в 3 семестре", "в третьем семестре"
+- 4, если пользователь пишет "четвертый семестр", "в 4 семестре", "в четвертом семестре"
 - иначе null
 
 course_name:
@@ -124,20 +133,22 @@ index_code:
 
 field:
 - можно оставить null
-"""
+
+Вопрос пользователя:
+""" + question
 
     try:
-        client = OpenAI(api_key=api_key)
+        client = genai.Client(api_key=api_key)
 
-        resp = client.chat.completions.create(
+        resp = client.models.generate_content(
             model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": question},
-            ],
+            contents=prompt,
         )
 
-        content = resp.choices[0].message.content.strip()
+        content = resp.text.strip()
+        print("[LLM RAW NORMALIZE RESPONSE]", content)
+        if content.startswith("```"):
+            content = content.replace("```json", "").replace("```", "").strip()
         data = json.loads(content)
 
         return {
@@ -150,4 +161,5 @@ field:
         }
 
     except Exception as e:
-            return None
+        print(f"LLM Не удалось нормализовать запрос через Gemini: {e}")
+        return None
