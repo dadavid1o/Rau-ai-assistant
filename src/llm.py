@@ -19,6 +19,10 @@ if load_dotenv is not None:
 def is_llm_available() -> bool:
     return genai is not None and bool(os.getenv("GEMINI_API_KEY"))
 
+def is_ai_debug() -> bool:
+    value = os.getenv("AI_DEBUG", "").strip().lower()
+    return value in ("1", "true", "yes", "on")  
+
 
 def answer_with_openai(question: str, context: str) -> str:
     api_key = os.getenv("GEMINI_API_KEY")
@@ -146,9 +150,13 @@ field:
         )
 
         content = resp.text.strip()
-        print("[LLM RAW NORMALIZE RESPONSE]", content)
+        if is_ai_debug():
+            print("[AI DEBUG] RAW NORMALIZE RESPONSE:")            
+            print(content)
+
         if content.startswith("```"):
             content = content.replace("```json", "").replace("```", "").strip()
+            
         data = json.loads(content)
 
         return {

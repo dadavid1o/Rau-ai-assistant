@@ -1,3 +1,4 @@
+import os
 from db import (
     init_db,
     get_conn,
@@ -9,7 +10,33 @@ from llm import answer_with_openai, normalize_user_query, is_llm_available
 from import_csv import import_courses
 
 
-def _variants(word: str):
+def is_ai_debug() -> bool:
+    value = os.getenv("AI_DEBUG", "").strip().lower()
+    return value in ("1", "true", "yes", "on")
+
+def short_text(text: str, limit: int = 160) -> str:
+    if text is None:
+        return ""
+    text = str(text).strip().replace("\n", " ")
+    if len(text) <= limit:
+        return text
+    return text[:limit] + "..."
+
+def format_debug_context(rows) -> str:
+    pats = []
+    for r in rows:
+        pats.append(
+            f"Код: {r['plan']} {r['index_code']}\n"
+            f"Дисциплина: {r['name']}\n"
+            f"Семестр: {r['semester']}, Кредиты: {r['credits']}, Тип: {r['course_type']}\n"
+            f"Описание: {short_text(r['description'])}\n"
+            f"Результаты обучения: {short_text(r['learning_outcomes'])}\n"
+            f"Компетенции: {short_text(r['competencies'], 140)}\n"
+        )
+    return "\n---\n".join(pats)
+    
+
+def _variants(word: str): 
     w = word.strip()
     vs = {w}
     vs.add(w.lower())
@@ -88,28 +115,49 @@ def format_context(rows) -> str:
         parts.append(
             f"Код: {r['plan']} {r['index_code']}\n"
             f"Дисциплина: {r['name']}\n"
-            f"Семестр: {r['semester']}, Credits: {r['credits']}, Type: {r['course_type']}\n"
+            f"Семестр: {r['semester']}, Кредиты: {r['credits']}, Тип: {r['course_type']}\n"
             f"Описание: {r['description']}\n"
             f"Результаты обучения: {r['learning_outcomes']}\n"
             f"Компетенции: {r['competencies']}\n"
            
         )
     return "\n---\n".join(parts)
-
+def print_intro_message() -> None:
+    llm_status = "доступен" if is_llm_available() else "недоступен"
+    
+    print(
+        "\n"
+        "==================================\n"
+        "RAU AI Assistant\n"
+        "==================================\n"
+        "Я помогу с вопросами по учебным планам MLDS и MatMod.\n"
+        "Можно спросить про дисциплины, семестры, кредиты,\n"
+        "компетенции и результаты обучения.\n"
+        f"LLM статус: {llm_status}\n"
+        "\n"
+        "Примеры вопросов:\n"
+         "- Какие предметы есть в MLDS в 1 семестре?\n"
+        "- Сколько кредитов у курса Machine Learning?\n"
+        "- Какие компетенции у MatMod во 2 семестре?\n"
+        "\n"
+        "Для выхода введи: exit или quit\n"
+    )
 
 def main() -> None:
     init_db()
 
-    import_courses("../data/mlds_skeleton.csv")
-    import_courses("../data/matmod_skeleton.csv")
-    print("Консольный ассистент. Введи вопрос или 'exit'.")
-
+    print_intro_message()
     while True:
         q = input("> ").strip()
         if q.lower() in ("exit", "quit"):
             break
-
+        
         normalized = normalize_user_query(q)
+        
+        if is_ai_debug():
+            print("\n[AI DEBUG] Нормализованный запрос:")
+            print(normalized)
+            
         rows = []
 
         if normalized is not None:
@@ -124,6 +172,9 @@ def main() -> None:
             elif intent == "list_courses" and plan:
                 rows = get_courses_by_plan(plan)
 
+            elif intent in ("course_competencies", "course_learning_outcomes") and plan and semester:
+                rows = get_courses_by_plan_and_semester(plan, semester)
+                
             elif intent in (
                 "course_info",
                 "course_semester",
@@ -144,8 +195,10 @@ def main() -> None:
             continue
 
         context = format_context(rows)
-        print("\n[Найденный контекст]")
-        print(context)
+        if is_ai_debug():
+            print("\n[AI DEBUG] Найденный контекст (сокращенный):")
+            print(format_debug_context(rows))
+            
 
         print("\n[Ответ ассистента]")
         print(answer_with_openai(q, context))
